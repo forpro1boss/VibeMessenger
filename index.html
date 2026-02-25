@@ -625,7 +625,92 @@ body::after {
 .send-btn:hover { transform:scale(1.08) translateY(-1px); box-shadow:0 6px 24px var(--gv1); }
 .send-btn:active { transform:scale(.94); }
 
-/* ─── TOAST ─── */
+/* ─── RULES WARNING CARD ─── */
+.rules-warn {
+  padding:20px; text-align:center; display:flex; flex-direction:column;
+  align-items:center; gap:10px;
+}
+.rw-icon { font-size:28px; }
+.rw-title { font-weight:700; font-size:14px; color:var(--txt); }
+.rw-text { font-size:13px; color:var(--sub); line-height:1.5; }
+.rw-btn {
+  height:36px; padding:0 16px; margin-top:4px;
+  background:linear-gradient(135deg,var(--v1),var(--v2));
+  border:none; border-radius:10px; color:#fff;
+  font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+  cursor:pointer; box-shadow:0 3px 12px var(--gv1); transition:all .18s;
+}
+.rw-btn:hover { transform:translateY(-1px); }
+
+/* ─── RULES GUIDE OVERLAY ─── */
+.rules-overlay {
+  position:fixed; inset:0; z-index:700;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.75); backdrop-filter:blur(12px);
+}
+.rules-overlay.show { display:flex; }
+.rules-box {
+  width:520px; max-height:85vh; overflow-y:auto;
+  background:rgba(12,12,30,.98);
+  border:1px solid var(--brd); border-radius:22px;
+  padding:32px 30px;
+  box-shadow:0 0 0 1px rgba(124,106,247,.1), 0 40px 80px rgba(0,0,0,.9);
+  position:relative;
+  animation:modalIn .38s cubic-bezier(.34,1.4,.64,1) both;
+}
+.rules-box::-webkit-scrollbar { width:3px; }
+.rules-box::-webkit-scrollbar-thumb { background:var(--s3); border-radius:3px; }
+.rules-box::before {
+  content:''; position:absolute; top:-1px; left:15%; right:15%; height:2px;
+  background:linear-gradient(90deg,transparent,var(--v1),var(--v2),transparent);
+}
+.rules-close {
+  position:absolute; top:14px; right:14px;
+  width:30px; height:30px; border-radius:8px;
+  background:var(--s2); border:1px solid var(--brd);
+  color:var(--dim); cursor:pointer; font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.rules-close:hover { color:var(--txt); background:var(--s3); }
+.rules-title { font-family:'Syne',sans-serif; font-weight:800; font-size:18px; margin-bottom:6px; }
+.rules-sub { font-size:13px; color:var(--sub); margin-bottom:22px; line-height:1.5; }
+.rules-step {
+  margin-bottom:20px;
+}
+.rules-step-num {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:24px; height:24px; border-radius:8px;
+  background:linear-gradient(135deg,var(--v1),var(--v2));
+  font-size:12px; font-weight:700; color:#fff; flex-shrink:0;
+  margin-bottom:8px;
+}
+.rules-step-title { font-weight:600; font-size:14px; margin-bottom:6px; }
+.rules-step-desc { font-size:13px; color:var(--sub); margin-bottom:10px; line-height:1.5; }
+.rules-code {
+  background:var(--s2); border:1px solid var(--brd); border-radius:11px;
+  padding:14px 16px; font-family:monospace; font-size:12px;
+  color:#c3b8ff; line-height:1.7; overflow-x:auto; white-space:pre;
+  position:relative;
+}
+.copy-code-btn {
+  position:absolute; top:8px; right:8px;
+  height:28px; padding:0 10px;
+  background:var(--s3); border:1px solid var(--brd); border-radius:7px;
+  color:var(--sub); font-family:'Inter',sans-serif; font-size:11px;
+  cursor:pointer; transition:all .15s;
+}
+.copy-code-btn:hover { color:var(--txt); }
+.rules-link {
+  display:inline-flex; align-items:center; gap:6px;
+  height:38px; padding:0 16px;
+  background:linear-gradient(135deg,var(--v1),var(--v2));
+  border:none; border-radius:10px; color:#fff;
+  font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+  cursor:pointer; text-decoration:none;
+  box-shadow:0 3px 12px var(--gv1); transition:all .18s; margin-top:8px;
+}
+.rules-link:hover { transform:translateY(-1px); box-shadow:0 6px 20px var(--gv1); }
 .toast {
   position:fixed; bottom:24px; left:50%;
   transform:translateX(-50%) translateY(80px);
@@ -778,6 +863,7 @@ body::after {
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
+      <button class="s-new-btn" onclick="showRulesGuide()" title="Настройка Firebase" style="font-size:14px">⚙️</button>
       <div class="orb-wrap">
         <div class="user-orb" id="user-orb" onclick="toggleMenu()"><span id="orb-letter">V</span></div>
         <div class="user-menu" id="user-menu">
@@ -874,6 +960,63 @@ body::after {
 
 <!-- toast -->
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════════ FIREBASE RULES GUIDE ═══════════════ -->
+<div class="rules-overlay" id="rules-overlay">
+  <div class="rules-box">
+    <button class="rules-close" onclick="document.getElementById('rules-overlay').classList.remove('show')">✕</button>
+    <div class="rules-title">⚙️ Настройка Firebase</div>
+    <div class="rules-sub">Чтобы поиск пользователей и чаты работали, нужно настроить правила Firestore.</div>
+
+    <div class="rules-step">
+      <div class="rules-step-num">1</div>
+      <div class="rules-step-title">Откройте Firebase Console</div>
+      <div class="rules-step-desc">Перейдите в Firestore Database → вкладка <b>Rules</b></div>
+      <a class="rules-link" href="https://console.firebase.google.com/project/nexus-messenger-2a60e/firestore/rules" target="_blank">
+        Открыть Firebase Console ↗
+      </a>
+    </div>
+
+    <div class="rules-step">
+      <div class="rules-step-num">2</div>
+      <div class="rules-step-title">Замените правила на следующие</div>
+      <div class="rules-step-desc">Выделите весь текст в редакторе и замените на это:</div>
+      <div class="rules-code" id="rules-code-block">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Любой вошедший может читать профили — нужно для поиска
+    match /users/{uid} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth.uid == uid;
+    }
+
+    // Чаты — только участники
+    match /chats/{chatId} {
+      allow read:   if request.auth != null
+        && (resource == null
+            || request.auth.uid in resource.data.participants);
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.participants;
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.participants;
+
+      match /messages/{msgId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+}</button>
+      <button class="copy-code-btn" onclick="copyRules()">Копировать</button>
+    </div>
+
+    <div class="rules-step">
+      <div class="rules-step-num">3</div>
+      <div class="rules-step-title">Нажмите «Publish»</div>
+      <div class="rules-step-desc">После публикации правил вернитесь в Vibe — поиск начнёт работать сразу.</div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════
      FIREBASE — все импорты через CDN esm.sh (работает
@@ -1047,7 +1190,9 @@ window.handleLogout = async () => {
 ════════════════════════════════ */
 async function saveUserDoc(uid, name, email) {
   await setDoc(doc(db, 'users', uid), {
-    name, email, uid,
+    name,
+    email: email.toLowerCase(), // always lowercase for search
+    uid,
     updatedAt: serverTimestamp()
   }, { merge: true });
 }
@@ -1309,7 +1454,7 @@ window.findUser = async () => {
   if (!email) return;
 
   if (email === S.me.email.toLowerCase()) {
-    out.innerHTML = '<div class="result-card"><div class="result-msg err">Это ваш собственный аккаунт.</div></div>';
+    setResult(out, 'err', 'Это ваш собственный аккаунт.');
     return;
   }
 
@@ -1321,7 +1466,7 @@ window.findUser = async () => {
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      out.innerHTML = '<div class="result-card"><div class="result-msg info">Пользователь не найден. Убедитесь, что он зарегистрирован в Vibe.</div></div>';
+      setResult(out, 'info', 'Пользователь не найден. Убедитесь, что он зарегистрирован в Vibe.');
       return;
     }
 
@@ -1331,7 +1476,6 @@ window.findUser = async () => {
     const g        = grad(userData.uid);
     const ltr      = (userData.name || '?')[0].toUpperCase();
 
-    // Store user data safely in dataset, avoid inline string injection
     const card = document.createElement('div');
     card.className = 'result-card';
     card.innerHTML = `
@@ -1342,21 +1486,35 @@ window.findUser = async () => {
           <div class="result-email">${esc(userData.email)}</div>
         </div>
         <button class="result-action${exists ? ' already' : ''}" id="start-btn">
-          ${exists ? '✓ Открыть' : '+ Начать'}
+          ${exists ? '✓ Открыть' : '+ Начать чат'}
         </button>
       </div>`;
-    // Attach click handler via JS (safe — no string interpolation of user data)
     card.querySelector('#start-btn').addEventListener('click', () => {
       startChat(userData.uid, userData.name);
     });
     out.appendChild(card);
+
   } catch(e) {
-    console.error(e);
-    out.innerHTML = '<div class="result-card"><div class="result-msg err">Ошибка поиска. Проверьте правила Firestore.</div></div>';
+    console.error('findUser error:', e);
+    if (e.code === 'permission-denied') {
+      out.innerHTML = `
+        <div class="result-card rules-warn">
+          <div class="rw-icon">⚠️</div>
+          <div class="rw-title">Нет доступа к базе данных</div>
+          <div class="rw-text">Установите правила Firestore чтобы поиск работал.</div>
+          <button class="rw-btn" onclick="showRulesGuide()">Показать инструкцию</button>
+        </div>`;
+    } else {
+      setResult(out, 'err', `Ошибка: ${e.code || e.message}`);
+    }
   } finally {
     btn.disabled = false; btn.textContent = 'Найти';
   }
 };
+
+function setResult(container, type, msg) {
+  container.innerHTML = `<div class="result-card"><div class="result-msg ${type}">${msg}</div></div>`;
+}
 
 /* ════════════════════════════════
    START / OPEN CHAT
@@ -1393,9 +1551,15 @@ async function startChat(partnerUid, partnerName) {
     selectChat(chatId, partnerName, ltr, g, ciEl);
     showToast(`💬 Чат с ${partnerName} открыт`, 'ok');
   } catch(e) {
-    console.error(e);
-    showToast('Ошибка создания чата', 'bad');
-    if (btn) { btn.disabled = false; btn.textContent = 'Ошибка'; }
+    console.error('startChat error:', e);
+    if (e.code === 'permission-denied') {
+      showToast('Нет прав. Настройте правила Firestore', 'bad');
+      window.showRulesGuide();
+    } else {
+      showToast(`Ошибка: ${e.code || e.message}`, 'bad');
+    }
+    const btn = $('start-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Повторить'; }
   }
 };
 
@@ -1446,6 +1610,12 @@ function hideLoader() {
   l.classList.add('hide');
   setTimeout(() => l.style.display = 'none', 380);
 }
+
+// Close rules overlay on backdrop click
+document.getElementById('rules-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget)
+    e.currentTarget.classList.remove('show');
+});
 
 function goAuth() {
   hideLoader();
@@ -1530,6 +1700,21 @@ window.esc = esc;
 function setLoading(btn, on) { btn.classList.toggle('loading', on); btn.disabled = on; }
 function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
 function hideErr(el) { el.classList.remove('show'); }
+
+window.showRulesGuide = () => {
+  document.getElementById('rules-overlay').classList.add('show');
+};
+
+window.copyRules = () => {
+  const code = document.getElementById('rules-code-block').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-code-btn');
+    btn.textContent = '✓ Скопировано';
+    setTimeout(() => btn.textContent = 'Копировать', 2000);
+  }).catch(() => {
+    showToast('Скопируйте вручную', '');
+  });
+};
 
 /* ═══ TOAST ═══ */
 let toastTimer;
