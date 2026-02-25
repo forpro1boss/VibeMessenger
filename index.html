@@ -33,6 +33,35 @@
 html, body { width:100%; height:100%; overflow:hidden; }
 body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--txt); font-size:14px; }
 
+/* ── INITIAL LOADER ── */
+#loader {
+  position:fixed; inset:0; z-index:9000;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:20px;
+  transition:opacity .35s ease;
+}
+#loader.hide { opacity:0; pointer-events:none; }
+.loader-gem {
+  width:52px; height:52px; border-radius:16px;
+  background:linear-gradient(135deg,var(--v1),var(--v2),var(--v3));
+  display:flex; align-items:center; justify-content:center; font-size:22px;
+  animation:loaderPulse 1.4s ease-in-out infinite;
+}
+@keyframes loaderPulse {
+  0%,100% { transform:scale(1);   box-shadow:0 0 28px var(--gv1); }
+  50%      { transform:scale(1.1); box-shadow:0 0 52px var(--gv1), 0 0 80px var(--gv2); }
+}
+.loader-dots { display:flex; gap:7px; }
+.loader-dots span {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--v1); opacity:.4;
+  animation:ldot 1.2s ease-in-out infinite;
+}
+.loader-dots span:nth-child(2){ animation-delay:.18s; background:var(--v2); }
+.loader-dots span:nth-child(3){ animation-delay:.36s; background:var(--v3); }
+@keyframes ldot { 0%,60%,100%{ opacity:.3; transform:translateY(0); } 30%{ opacity:1; transform:translateY(-6px); } }
+
 /* noise texture overlay */
 body::after {
   content:''; position:fixed; inset:0; pointer-events:none; z-index:1;
@@ -120,8 +149,9 @@ body::after {
 #auth-screen {
   position:relative; z-index:10;
   width:100%; height:100vh;
-  display:flex; align-items:center; justify-content:center;
+  display:none; align-items:center; justify-content:center;
 }
+#auth-screen.show { display:flex; }
 .auth-wrap {
   display:flex; flex-direction:column; align-items:center; gap:26px;
   animation:authIn .65s cubic-bezier(.34,1.4,.64,1) both;
@@ -636,6 +666,12 @@ body::after {
 
 <div class="bg-blobs"><div class="bb bb1"></div><div class="bb bb2"></div><div class="bb bb3"></div></div>
 
+<!-- ═══════════════ LOADER ═══════════════ -->
+<div id="loader">
+  <div class="loader-gem">✦</div>
+  <div class="loader-dots"><span></span><span></span><span></span></div>
+</div>
+
 <!-- ═══════════════ AUTH ═══════════════ -->
 <div id="auth-screen">
   <div class="auth-wrap">
@@ -999,6 +1035,10 @@ window.handleLogout = async () => {
   if (S.msgUnsub) { S.msgUnsub(); S.msgUnsub = null; }
   if (S.chatsUnsub) { S.chatsUnsub(); S.chatsUnsub = null; }
   S.me = null; S.activeChatId = null; S.allChats = [];
+  // reset chat list UI
+  $('chats-list').querySelectorAll('.chat-item, .list-section').forEach(e => e.remove());
+  $('chats-empty').style.display = 'flex';
+  showPanel('welcome');
   await signOut(auth);
 };
 
@@ -1016,7 +1056,8 @@ async function saveUserDoc(uid, name, email) {
    ENTER APP
 ════════════════════════════════ */
 function goApp() {
-  $('auth-screen').style.display = 'none';
+  hideLoader();
+  $('auth-screen').classList.remove('show');
   $('name-modal').classList.remove('show');
   $('app').classList.add('show');
 
@@ -1290,20 +1331,25 @@ window.findUser = async () => {
     const g        = grad(userData.uid);
     const ltr      = (userData.name || '?')[0].toUpperCase();
 
-    out.innerHTML = `
-      <div class="result-card">
-        <div class="result-inner">
-          <div class="result-av" style="background:${g}">${esc(ltr)}</div>
-          <div class="result-info">
-            <div class="result-name">${esc(userData.name)}</div>
-            <div class="result-email">${esc(userData.email)}</div>
-          </div>
-          <button class="result-action${exists ? ' already' : ''}" id="start-btn"
-            onclick="startChat('${userData.uid}','${esc(userData.name)}')">
-            ${exists ? '✓ Открыть' : '+ Начать'}
-          </button>
+    // Store user data safely in dataset, avoid inline string injection
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <div class="result-inner">
+        <div class="result-av" style="background:${g}">${esc(ltr)}</div>
+        <div class="result-info">
+          <div class="result-name">${esc(userData.name)}</div>
+          <div class="result-email">${esc(userData.email)}</div>
         </div>
+        <button class="result-action${exists ? ' already' : ''}" id="start-btn">
+          ${exists ? '✓ Открыть' : '+ Начать'}
+        </button>
       </div>`;
+    // Attach click handler via JS (safe — no string interpolation of user data)
+    card.querySelector('#start-btn').addEventListener('click', () => {
+      startChat(userData.uid, userData.name);
+    });
+    out.appendChild(card);
   } catch(e) {
     console.error(e);
     out.innerHTML = '<div class="result-card"><div class="result-msg err">Ошибка поиска. Проверьте правила Firestore.</div></div>';
@@ -1315,7 +1361,7 @@ window.findUser = async () => {
 /* ════════════════════════════════
    START / OPEN CHAT
 ════════════════════════════════ */
-window.startChat = async (partnerUid, partnerName) => {
+async function startChat(partnerUid, partnerName) {
   const btn = $('start-btn');
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
 
@@ -1342,8 +1388,8 @@ window.startChat = async (partnerUid, partnerName) => {
     const g   = grad(partnerUid);
     const ltr = (partnerName || '?')[0].toUpperCase();
 
-    // find or wait for CI element (subscribeChats will fire)
-    let ciEl = $('chats-list').querySelector(`[data-chat-id="${chatId}"]`);
+    // find sidebar item (may not exist yet if onSnapshot hasn't fired)
+    const ciEl = $('chats-list').querySelector(`[data-chat-id="${chatId}"]`);
     selectChat(chatId, partnerName, ltr, g, ciEl);
     showToast(`💬 Чат с ${partnerName} открыт`, 'ok');
   } catch(e) {
@@ -1395,13 +1441,21 @@ document.addEventListener('click', e => {
     closeUserMenu();
 });
 
+function hideLoader() {
+  const l = $('loader');
+  l.classList.add('hide');
+  setTimeout(() => l.style.display = 'none', 380);
+}
+
 function goAuth() {
-  $('auth-screen').style.display = 'flex';
+  hideLoader();
+  $('auth-screen').classList.add('show');
   $('app').classList.remove('show');
   $('name-modal').classList.remove('show');
 }
 function showNameModal(hint) {
-  $('auth-screen').style.display = 'none';
+  hideLoader();
+  $('auth-screen').classList.remove('show');
   $('app').classList.remove('show');
   $('name-modal').classList.add('show');
   if (hint) $('gn-input').value = hint;
